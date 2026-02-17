@@ -4,38 +4,42 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Motivación del día</title>
+
+  <!-- Tailwind vía CDN (rápido para GitHub Pages) -->
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
 
 <body class="min-h-screen grid place-items-center bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800 text-white">
-  <main class="w-[min(900px,92vw)]">
-    <header class="text-center mb-6">
-      <h1 class="text-xl md:text-2xl font-semibold opacity-95">Motivación del día</h1>
+  <main class="w-[min(860px,92vw)] rounded-2xl border border-white/15 bg-white/5 p-7 md:p-10 shadow-2xl">
+    <header class="text-center">
+      <h1 class="text-xl md:text-2xl font-semibold tracking-tight opacity-95">
+        Motivación del día
+      </h1>
       <p id="date" class="mt-2 text-sm text-white/70"></p>
-      <p id="meta" class="mt-1 text-sm text-white/70"></p>
     </header>
 
-    <!-- Aquí se muestra la imagen generada -->
-    <div class="rounded-2xl border border-white/15 bg-white/5 p-4 md:p-6 shadow-2xl">
-      <img id="quoteImg" alt="Frase del día" class="w-full rounded-xl" />
-      <p id="fallback" class="mt-4 text-center text-white/70 text-sm hidden"></p>
-    </div>
+    <section class="mt-7 text-center">
+      <p id="quote" class="text-2xl md:text-4xl font-bold leading-tight">
+        Cargando...
+      </p>
+      <p id="meta" class="mt-5 text-sm text-white/70"></p>
+    </section>
   </main>
 
   <script>
     const SHEETS_CSV_URL =
       "https://docs.google.com/spreadsheets/d/e/2PACX-1vSIeSLoGa--GmKVbgTW_c_KfKD-qbA-ySD_RQMPVlwrACZmIWENC1X0foqJJaVHmgwVtsMHkWdnhHAd/pub?output=csv";
 
-    const dateEl = document.getElementById("date");
-    const metaEl = document.getElementById("meta");
-    const imgEl = document.getElementById("quoteImg");
-    const fallbackEl = document.getElementById("fallback");
+    const quoteEl = document.getElementById("quote");
+    const dateEl  = document.getElementById("date");
+    const metaEl  = document.getElementById("meta");
 
     function formatDateHuman(d){
       return d.toLocaleDateString("es-ES", {
         weekday:"long", year:"numeric", month:"long", day:"numeric"
       });
     }
+
     function formatDateKey(d){
       const yyyy = d.getFullYear();
       const mm = String(d.getMonth()+1).padStart(2,'0');
@@ -47,117 +51,23 @@
     function parseCsvRows(csvText){
       const lines = csvText.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
       if (lines.length <= 1) return [];
+
       const rows = [];
-      for (const line of lines.slice(1)) {
+      for (const line of lines.slice(1)) { // saltar header
         const parts = line.split(",");
         const fecha = (parts[0] || "").trim().replace(/^"|"$/g, "");
         let mensaje = parts.slice(1).join(",").trim();
+
         if (mensaje.startsWith('"') && mensaje.endsWith('"')) {
           mensaje = mensaje.slice(1, -1).replace(/""/g, '"');
         }
+
         if (fecha && mensaje) rows.push({ fecha, mensaje });
       }
       return rows;
     }
 
-    // Dibuja una tarjeta con texto y devuelve dataURL para <img>
-    function renderQuoteToImage({ title, dateKey, quote, footer }) {
-      const W = 1200;
-      const H = 630; // tamaño típico de card / share
-      const pad = 84;
-
-      const canvas = document.createElement("canvas");
-      canvas.width = W;
-      canvas.height = H;
-      const ctx = canvas.getContext("2d");
-
-      // Fondo degradado
-      const grad = ctx.createLinearGradient(0, 0, W, H);
-      grad.addColorStop(0, "#020617");  // slate-950
-      grad.addColorStop(0.55, "#0b1220");
-      grad.addColorStop(1, "#111827");  // slate-900
-      ctx.fillStyle = grad;
-      ctx.fillRect(0, 0, W, H);
-
-      // Tarjeta
-      const cardX = 56, cardY = 56, cardW = W - 112, cardH = H - 112;
-      ctx.fillStyle = "rgba(255,255,255,0.06)";
-      roundRect(ctx, cardX, cardY, cardW, cardH, 36, true, false);
-      ctx.strokeStyle = "rgba(255,255,255,0.14)";
-      ctx.lineWidth = 2;
-      roundRect(ctx, cardX, cardY, cardW, cardH, 36, false, true);
-
-      // Título
-      ctx.fillStyle = "rgba(255,255,255,0.9)";
-      ctx.font = "600 42px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-      ctx.fillText(title, cardX + pad, cardY + pad);
-
-      // Fecha
-      ctx.fillStyle = "rgba(255,255,255,0.65)";
-      ctx.font = "400 28px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-      ctx.fillText(dateKey, cardX + pad, cardY + pad + 56);
-
-      // Quote (texto envuelto)
-      ctx.fillStyle = "rgba(255,255,255,0.95)";
-      ctx.font = "700 58px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-
-      const maxWidth = cardW - pad*2;
-      const startY = cardY + pad + 150;
-      const lineHeight = 74;
-
-      const lines = wrapText(ctx, quote, maxWidth);
-      // Ajuste si se va muy largo
-      let y = startY;
-      for (let i = 0; i < lines.length; i++) {
-        if (y > cardY + cardH - 130) break;
-        ctx.fillText(lines[i], cardX + pad, y);
-        y += lineHeight;
-      }
-
-      // Footer
-      ctx.fillStyle = "rgba(255,255,255,0.65)";
-      ctx.font = "500 28px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-      ctx.fillText(footer, cardX + pad, cardY + cardH - 70);
-
-      return canvas.toDataURL("image/png");
-    }
-
-    function wrapText(ctx, text, maxWidth) {
-      const words = (text || "").split(/\s+/);
-      const lines = [];
-      let line = "";
-
-      for (const w of words) {
-        const test = line ? line + " " + w : w;
-        if (ctx.measureText(test).width <= maxWidth) {
-          line = test;
-        } else {
-          if (line) lines.push(line);
-          line = w;
-        }
-      }
-      if (line) lines.push(line);
-      return lines;
-    }
-
-    function roundRect(ctx, x, y, w, h, r, fill, stroke) {
-      const radius = typeof r === "number" ? {tl:r,tr:r,br:r,bl:r} : r;
-      ctx.beginPath();
-      ctx.moveTo(x + radius.tl, y);
-      ctx.lineTo(x + w - radius.tr, y);
-      ctx.quadraticCurveTo(x + w, y, x + w, y + radius.tr);
-      ctx.lineTo(x + w, y + h - radius.br);
-      ctx.quadraticCurveTo(x + w, y + h, x + w - radius.br, y + h);
-      ctx.lineTo(x + radius.bl, y + h);
-      ctx.quadraticCurveTo(x, y + h, x, y + h - radius.bl);
-      ctx.lineTo(x, y + radius.tl);
-      ctx.quadraticCurveTo(x, y, x + radius.tl, y);
-      ctx.closePath();
-      if (fill) ctx.fill();
-      if (stroke) ctx.stroke();
-    }
-
-    async function loadAndRender(){
+    async function loadMessageByDate(){
       const today = new Date();
       const todayKey = formatDateKey(today);
 
@@ -170,54 +80,42 @@
         const csv = await res.text();
 
         const rows = parseCsvRows(csv);
-        if (!rows.length) throw new Error("Sin filas en el sheet");
 
-        const exact = rows.find(r => r.fecha === todayKey);
-
-        let quote = "";
-        let usedDate = todayKey;
-        let footer = "Tu frase de hoy";
-
-        if (exact) {
-          quote = exact.mensaje;
-          metaEl.textContent = `Programada para hoy (${todayKey}).`;
-        } else {
-          const future = rows
-            .map(r => ({...r, dateObj: new Date(r.fecha + "T00:00:00")}))
-            .filter(r => !isNaN(r.dateObj) && r.dateObj > today)
-            .sort((a,b) => a.dateObj - b.dateObj)[0];
-
-          if (future) {
-            quote = future.mensaje;
-            usedDate = future.fecha;
-            footer = "Próxima frase programada";
-            metaEl.textContent = `Hoy no hay frase. Mostrando próxima (${future.fecha}).`;
-          } else {
-            quote = "Agrega una frase para hoy o fechas futuras en tu Google Sheet.";
-            footer = "Configura tu calendario";
-            metaEl.textContent = "No hay frases futuras.";
-          }
+        if (!rows.length) {
+          quoteEl.textContent = "Tu Sheet está vacío o no tiene las columnas fecha/mensaje.";
+          return;
         }
 
-        const dataUrl = renderQuoteToImage({
-          title: "Motivación del día",
-          dateKey: usedDate,
-          quote,
-          footer
-        });
+        // Frase exacta para hoy
+        const exact = rows.find(r => r.fecha === todayKey);
+        if (exact) {
+          quoteEl.textContent = exact.mensaje;
+          metaEl.textContent = `Programada para hoy (${todayKey}).`;
+          return;
+        }
 
-        imgEl.src = dataUrl;
-        fallbackEl.classList.add("hidden");
+        // Próxima futura
+        const future = rows
+          .map(r => ({ ...r, dateObj: new Date(r.fecha + "T00:00:00") }))
+          .filter(r => !isNaN(r.dateObj) && r.dateObj > today)
+          .sort((a,b) => a.dateObj - b.dateObj)[0];
+
+        if (future) {
+          quoteEl.textContent = "Hoy no hay frase programada.";
+          metaEl.textContent = `Próxima: ${future.fecha} → ${future.mensaje}`;
+        } else {
+          quoteEl.textContent = "Hoy no hay frase programada.";
+          metaEl.textContent = "Agrega nuevas filas con fechas futuras (YYYY-MM-DD).";
+        }
 
       } catch (err) {
-        imgEl.removeAttribute("src");
-        fallbackEl.textContent = "Error cargando o generando la imagen. Revisa que el Sheet esté publicado como CSV.";
-        fallbackEl.classList.remove("hidden");
+        quoteEl.textContent = "Error cargando frases. Revisa que el Sheet esté publicado como CSV.";
+        metaEl.textContent = "";
         console.error(err);
       }
     }
 
-    loadAndRender();
+    loadMessageByDate();
   </script>
 </body>
 </html>
