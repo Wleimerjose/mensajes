@@ -1,127 +1,41 @@
 <!doctype html>
 <html lang="es" class="loading">
+
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Motivación del día</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Motivación del día</title>
 
-  <!-- Tailwind vía CDN -->
-  <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Tailwind vía CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
 
-  <style>
-    /* Oculta TODO (incluye fondo) hasta que el texto esté listo */
-    html.loading, html.loading body { display: none; }
-
-    /* Fijar tamaño exacto del “canvas” */
-    .page {
-      width: 1320px;
-      height: 2868px;
-    }
-  </style>
+    <style>
+        /* Fijar tamaño exacto del “canvas” */
+        .page {
+            width: 1320px;
+            height: 2868px;
+        }
+    </style>
 </head>
 
-<body class="min-h-screen grid place-items-center bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800 text-white">
-  <!-- Contenedor con medidas exactas -->
-  <div class="page grid place-items-center">
-    <main class="w-[min(860px,92vw)] rounded-2xl border border-white/15 bg-white/5 p-7 md:p-10 shadow-2xl">
-      <header class="text-center">
-        <h1 class="text-xl md:text-2xl font-semibold tracking-tight opacity-95">
-          Motivación del día
-        </h1>
-        <p id="date" class="mt-2 text-sm text-white/70"></p>
-      </header>
+<body
+    class="min-h-screen grid place-items-center bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800 text-white">
+    <!-- Contenedor con medidas exactas -->
+    <div class="page grid place-items-center">
+        <main class="w-[min(860px,92vw)] rounded-2xl border border-white/15 bg-white/5 p-7 md:p-10 shadow-2xl">
+            <header class="text-center">
+                <h1 class="text-xl md:text-2xl font-semibold tracking-tight opacity-95">
+                    Hola
+                </h1>
+                
+            </header>
 
-      <section class="mt-7 text-center">
-        <p id="quote" class="text-2xl md:text-4xl font-bold leading-tight"></p>
-        <p id="meta" class="mt-5 text-sm text-white/70"></p>
-      </section>
-    </main>
-  </div>
+            <section class="mt-7 text-center">
+                Hola
+            </section>
+        </main>
+    </div>
 
-  <script>
-    const SHEETS_CSV_URL =
-      "https://docs.google.com/spreadsheets/d/e/2PACX-1vSIeSLoGa--GmKVbgTW_c_KfKD-qbA-ySD_RQMPVlwrACZmIWENC1X0foqJJaVHmgwVtsMHkWdnhHAd/pub?output=csv";
-
-    const quoteEl = document.getElementById("quote");
-    const dateEl  = document.getElementById("date");
-    const metaEl  = document.getElementById("meta");
-
-    function formatDateHuman(d){
-      return d.toLocaleDateString("es-ES", {
-        weekday:"long", year:"numeric", month:"long", day:"numeric"
-      });
-    }
-
-    function formatDateKey(d){
-      const yyyy = d.getFullYear();
-      const mm = String(d.getMonth()+1).padStart(2,'0');
-      const dd = String(d.getDate()).padStart(2,'0');
-      return `${yyyy}-${mm}-${dd}`;
-    }
-
-    // CSV simple: 2 columnas fecha,mensaje (mensaje puede tener comas)
-    function parseCsvRows(csvText){
-      const lines = csvText.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
-      if (lines.length <= 1) return [];
-
-      const rows = [];
-      for (const line of lines.slice(1)) { // saltar header
-        const parts = line.split(",");
-        const fecha = (parts[0] || "").trim().replace(/^"|"$/g, "");
-        let mensaje = parts.slice(1).join(",").trim();
-
-        if (mensaje.startsWith('"') && mensaje.endsWith('"')) {
-          mensaje = mensaje.slice(1, -1).replace(/""/g, '"');
-        }
-
-        if (fecha && mensaje) rows.push({ fecha, mensaje });
-      }
-      return rows;
-    }
-
-    function showAll(){
-      document.documentElement.classList.remove("loading");
-    }
-
-    async function loadMessageByDate(){
-      const today = new Date();
-      const todayKey = formatDateKey(today);
-
-      dateEl.textContent = formatDateHuman(today);
-      metaEl.textContent = "";
-
-      try {
-        const res = await fetch(SHEETS_CSV_URL, { cache: "no-store" });
-        if (!res.ok) throw new Error("No se pudo cargar el CSV");
-        const csv = await res.text();
-
-        const rows = parseCsvRows(csv);
-        if (!rows.length) {
-          quoteEl.textContent = "Tu Sheet está vacío o no tiene las columnas fecha/mensaje.";
-          showAll();
-          return;
-        }
-
-        const exact = rows.find(r => r.fecha === todayKey);
-        if (exact) {
-          quoteEl.textContent = exact.mensaje;
-          metaEl.textContent = `Programada para hoy (${todayKey}).`;
-          showAll();
-          return;
-        }
-
-        quoteEl.textContent = "Hoy no hay frase programada.";
-        showAll();
-
-      } catch (err) {
-        quoteEl.textContent = "Error cargando frases. Revisa que el Sheet esté publicado como CSV.";
-        metaEl.textContent = "";
-        console.error(err);
-        showAll();
-      }
-    }
-
-    loadMessageByDate();
-  </script>
 </body>
+
 </html>
