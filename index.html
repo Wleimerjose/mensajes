@@ -22,21 +22,8 @@
     }
     h1{ font-size: 22px; margin: 0 0 10px; opacity:.9; }
     .date{ font-size: 14px; opacity:.75; margin-bottom: 18px; }
-    .quote{
-      font-size: 26px; line-height:1.25; font-weight: 650;
-      margin: 0 0 18px;
-    }
-    .hint{ font-size: 14px; opacity:.75; margin: 0; }
-    button{
-      margin-top: 18px;
-      padding: 10px 14px;
-      border-radius: 12px;
-      border: 1px solid rgba(255,255,255,.25);
-      background: rgba(255,255,255,.10);
-      color:#fff;
-      cursor:pointer;
-    }
-    button:hover{ background: rgba(255,255,255,.16); }
+    .quote{ font-size: 26px; line-height:1.25; font-weight: 650; margin: 0; }
+    .small{ margin-top:14px; font-size: 13px; opacity:.7; }
   </style>
 </head>
 <body>
@@ -44,25 +31,25 @@
     <h1>Motivación del día</h1>
     <div class="date" id="date"></div>
     <p class="quote" id="quote">Cargando...</p>
-    <p class="hint">Vuelve mañana: el mensaje cambia automáticamente.</p>
-    <button id="newBtn" type="button">Ver otro (solo hoy)</button>
+    <p class="small">Se actualiza automáticamente cada día.</p>
   </div>
 
   <script>
-    const quotes = [
-      "Hoy es un buen día para empezar, incluso en pequeño.",
-      "Avanza 1%: lo constante vence a lo perfecto.",
-      "Tu futuro se construye con lo que haces hoy, no mañana.",
-      "No esperes motivación: crea hábitos.",
-      "Si te cansas, descansa. Pero no abandones.",
-      "Hazlo con miedo, pero hazlo.",
-      "La disciplina es la forma más sincera de amor propio.",
-      "Una decisión valiente puede cambiar tu año.",
-      "Lo difícil te está preparando para lo grande.",
-      "Hoy: enfoque, acción, gratitud."
-    ];
+    // Tu Google Sheet publicado como CSV
+    const SHEETS_CSV_URL =
+      "https://docs.google.com/spreadsheets/d/e/2PACX-1vSIeSLoGa--GmKVbgTW_c_KfKD-qbA-ySD_RQMPVlwrACZmIWENC1X0foqJJaVHmgwVtsMHkWdnhHAd/pub?output=csv";
 
-    // Genera un número "del día" estable: mismo mensaje para todos los que abran hoy
+    const quoteEl = document.getElementById("quote");
+    const dateEl  = document.getElementById("date");
+
+    function formatDate(){
+      const now = new Date();
+      return now.toLocaleDateString("es-ES", {
+        weekday:"long", year:"numeric", month:"long", day:"numeric"
+      });
+    }
+
+    // Índice fijo por día (mismo mensaje durante todo el día)
     function dailyIndex(length){
       const now = new Date();
       const yyyy = now.getFullYear();
@@ -72,26 +59,55 @@
       return seed % length;
     }
 
-    function formatDate(){
-      const now = new Date();
-      return now.toLocaleDateString("es-ES", { weekday:"long", year:"numeric", month:"long", day:"numeric" });
+    // Parser de CSV simple para 1 columna "mensaje"
+    function parseCsvMessages(csvText){
+      const lines = csvText
+        .split(/\r?\n/)
+        .map(l => l.trim())
+        .filter(Boolean);
+
+      if (lines.length <= 1) return []; // solo encabezado o vacío
+
+      const dataLines = lines.slice(1); // saltamos encabezado
+
+      return dataLines.map(line => {
+        let msg = line;
+
+        // quita comillas exteriores si vienen
+        if (msg.startsWith('"') && msg.endsWith('"')) {
+          msg = msg.slice(1, -1).replace(/""/g, '"');
+        }
+
+        return msg.trim();
+      }).filter(Boolean);
     }
 
-    const quoteEl = document.getElementById("quote");
-    const dateEl  = document.getElementById("date");
-    const btn     = document.getElementById("newBtn");
+    async function loadMessages(){
+      dateEl.textContent = formatDate();
 
-    dateEl.textContent = formatDate();
+      try {
+        const res = await fetch(SHEETS_CSV_URL, { cache: "no-store" });
+        if (!res.ok) throw new Error("No se pudo cargar el CSV");
+        const csv = await res.text();
 
-    let todayIdx = dailyIndex(quotes.length);
-    quoteEl.textContent = quotes[todayIdx];
+        const messages = parseCsvMessages(csv);
 
-    // Botón: te muestra otro mensaje al azar, pero SOLO hoy
-    btn.addEventListener("click", () => {
-      let i = Math.floor(Math.random() * quotes.length);
-      if (i === todayIdx) i = (i + 1) % quotes.length;
-      quoteEl.textContent = quotes[i];
-    });
+        if (!messages.length) {
+          quoteEl.textContent = "Agrega mensajes en tu Google Sheet (columna 'mensaje').";
+          return;
+        }
+
+        const idx = dailyIndex(messages.length);
+        quoteEl.textContent = messages[idx];
+
+      } catch (err) {
+        quoteEl.textContent =
+          "Error cargando mensajes. Revisa que el Sheet esté 'Publicado en la web' como CSV.";
+        console.error(err);
+      }
+    }
+
+    loadMessages();
   </script>
 </body>
 </html>
