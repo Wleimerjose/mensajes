@@ -67,4 +67,64 @@
         const fecha = (parts[0] || "").trim().replace(/^"|"$/g, "");
         let mensaje = parts.slice(1).join(",").trim();
 
-        if (mensaje.startsWith('"') && mensaje.endsWith
+        if (mensaje.startsWith('"') && mensaje.endsWith('"')) {
+          mensaje = mensaje.slice(1, -1).replace(/""/g, '"');
+        }
+
+        if (fecha && mensaje) rows.push({ fecha, mensaje });
+      }
+      return rows;
+    }
+
+    async function loadMessageByDate(){
+      const today = new Date();
+      const todayKey = formatDateKey(today);
+
+      dateEl.textContent = formatDateHuman(today);
+      metaEl.textContent = "";
+
+      try {
+        const res = await fetch(SHEETS_CSV_URL, { cache: "no-store" });
+        if (!res.ok) throw new Error("No se pudo cargar el CSV");
+        const csv = await res.text();
+
+        const rows = parseCsvRows(csv);
+
+        if (!rows.length) {
+          quoteEl.textContent = "Tu Sheet está vacío o no tiene las columnas fecha/mensaje.";
+          return;
+        }
+
+        // 1) Buscar frase exacta para hoy
+        const exact = rows.find(r => r.fecha === todayKey);
+        if (exact) {
+          quoteEl.textContent = exact.mensaje;
+          metaEl.textContent = `Programada para hoy (${todayKey}).`;
+          return;
+        }
+
+        // 2) Si no hay para hoy, buscar próxima futura
+        const future = rows
+          .map(r => ({ ...r, dateObj: new Date(r.fecha + "T00:00:00") }))
+          .filter(r => !isNaN(r.dateObj) && r.dateObj > today)
+          .sort((a,b) => a.dateObj - b.dateObj)[0];
+
+        if (future) {
+          quoteEl.textContent = "Hoy no hay frase programada.";
+          metaEl.textContent = `Próxima: ${future.fecha} → ${future.mensaje}`;
+        } else {
+          quoteEl.textContent = "Hoy no hay frase programada.";
+          metaEl.textContent = "Agrega nuevas filas con fechas futuras (YYYY-MM-DD).";
+        }
+
+      } catch (err) {
+        quoteEl.textContent =
+          "Error cargando frases. Revisa que el Sheet esté 'Publicado en la web' como CSV.";
+        console.error(err);
+      }
+    }
+
+    loadMessageByDate();
+  </script>
+</body>
+</html>
