@@ -3,7 +3,7 @@
 <body>
   <div id="mensaje"></div>
   <script>
-    fetch("TU_WEBAPP_URL", { cache: "no-store" })
+    fetch("https://script.google.com/macros/s/AKfycbxND17ueRy9pMj4vVCyvp8xQYfV1CPaNw0V9Ec6gVSTMuPzzSdznLe_syCPIbw12Dbp/exec", { cache: "no-store" })
       .then(r => r.text())
       .then(t => document.getElementById("mensaje").textContent = t)
       .catch(() => document.getElementById("mensaje").textContent = "");
