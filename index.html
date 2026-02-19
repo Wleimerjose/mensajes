@@ -1,24 +1,60 @@
 <!doctype html>
 <html lang="es" class="loading">
-
 <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>Motivación del día</title>
-<meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0" />
-<meta http-equiv="Pragma" content="no-cache" />
-<meta http-equiv="Expires" content="0" />
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Motivación del día</title>
 
-    <script src="https://cdn.tailwindcss.com"></script>
+  <!-- No-cache (ayuda, aunque no es 100% garantizado en todos los navegadores) -->
+  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <style>
+    /* Oculta TODO (incluye fondo) hasta que el texto esté listo */
+    html.loading, html.loading body { display: none; }
+
+    /* Medidas exactas */
+    .page { width: 1320px; height: 2868px; }
+  </style>
 </head>
 
-<body
-    class="min-h-screen grid place-items-center bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800 text-white">
-    <!-- Contenedor con medidas exactas -->
-    <div class="page grid place-items-center">
-       
-    </div>
+<body class="min-h-screen grid place-items-center bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800 text-white">
+  <div class="page grid place-items-center">
+    <main class="w-[min(980px,92vw)] rounded-2xl border border-white/15 bg-white/5 p-7 md:p-10 shadow-2xl">
+      <header class="text-center">
+        <h1 class="text-xl md:text-2xl font-semibold tracking-tight opacity-95">Motivación del día</h1>
+        <p id="date" class="mt-2 text-sm text-white/70"></p>
+      </header>
 
-</body>
+      <section class="mt-7 text-center">
+        <p id="quote" class="text-2xl md:text-4xl font-bold leading-tight"></p>
+        <p id="meta" class="mt-5 text-sm text-white/70"></p>
+      </section>
+    </main>
+  </div>
 
-</html>
+  <script>
+    // ✅ Pega aquí tu URL publicada como CSV (Google Sheets -> Publicar en la web -> CSV)
+    const SHEETS_CSV_URL =
+      "https://docs.google.com/spreadsheets/d/e/2PACX-1vSIeSLoGa--GmKVbgTW_c_KfKD-qbA-ySD_RQMPVlwrACZmIWENC1X0foqJJaVHmgwVtsMHkWdnhHAd/pub?output=csv";
+
+    const quoteEl = document.getElementById("quote");
+    const dateEl  = document.getElementById("date");
+    const metaEl  = document.getElementById("meta");
+
+    function showAll(){
+      document.documentElement.classList.remove("loading");
+    }
+
+    function formatDateHuman(d){
+      return d.toLocaleDateString("es-ES", {
+        weekday:"long", year:"numeric", month:"long", day:"numeric"
+      });
+    }
+
+    function formatDateKey(d){
+      const yyyy = d.getFullYear();
+      const m
