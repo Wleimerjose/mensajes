@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Motivación del día</title>
 
-  <!-- No-cache (ayuda, aunque no es 100% garantizado en todos los navegadores) -->
+  <!-- No-cache (ayuda, aunque no es 100% garantizado en todos los casos) -->
   <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
@@ -16,7 +16,7 @@
     /* Oculta TODO (incluye fondo) hasta que el texto esté listo */
     html.loading, html.loading body { display: none; }
 
-    /* Medidas exactas */
+    /* Medidas exactas solicitadas */
     .page { width: 1320px; height: 2868px; }
   </style>
 </head>
@@ -25,7 +25,9 @@
   <div class="page grid place-items-center">
     <main class="w-[min(980px,92vw)] rounded-2xl border border-white/15 bg-white/5 p-7 md:p-10 shadow-2xl">
       <header class="text-center">
-        <h1 class="text-xl md:text-2xl font-semibold tracking-tight opacity-95">Motivación del día</h1>
+        <h1 class="text-xl md:text-2xl font-semibold tracking-tight opacity-95">
+          Motivación del día
+        </h1>
         <p id="date" class="mt-2 text-sm text-white/70"></p>
       </header>
 
@@ -37,7 +39,6 @@
   </div>
 
   <script>
-    // ✅ Pega aquí tu URL publicada como CSV (Google Sheets -> Publicar en la web -> CSV)
     const SHEETS_CSV_URL =
       "https://docs.google.com/spreadsheets/d/e/2PACX-1vSIeSLoGa--GmKVbgTW_c_KfKD-qbA-ySD_RQMPVlwrACZmIWENC1X0foqJJaVHmgwVtsMHkWdnhHAd/pub?output=csv";
 
@@ -51,10 +52,120 @@
 
     function formatDateHuman(d){
       return d.toLocaleDateString("es-ES", {
-        weekday:"long", year:"numeric", month:"long", day:"numeric"
+        weekday: "long", year: "numeric", month: "long", day: "numeric"
       });
     }
 
     function formatDateKey(d){
       const yyyy = d.getFullYear();
-      const m
+      const mm = String(d.getMonth() + 1).padStart(2, "0");
+      const dd = String(d.getDate()).padStart(2, "0");
+      return `${yyyy}-${mm}-${dd}`; // YYYY-MM-DD
+    }
+
+    // CSV robusto (soporta comas y comillas en Mensaje)
+    function parseCsv(csvText){
+      const rows = [];
+      let row = [], field = "", inQuotes = false;
+
+      for (let i = 0; i < csvText.length; i++) {
+        const c = csvText[i];
+        const next = csvText[i + 1];
+
+        if (c === '"') {
+          if (inQuotes && next === '"') { field += '"'; i++; }
+          else { inQuotes = !inQuotes; }
+          continue;
+        }
+
+        if (!inQuotes && c === ",") {
+          row.push(field); field = "";
+          continue;
+        }
+
+        if (!inQuotes && (c === "\n" || c === "\r")) {
+          if (c === "\r" && next === "\n") i++;
+          row.push(field); field = "";
+          if (row.some(v => v.trim() !== "")) rows.push(row);
+          row = [];
+          continue;
+        }
+
+        field += c;
+      }
+
+      row.push(field);
+      if (row.some(v => v.trim() !== "")) rows.push(row);
+
+      return rows;
+    }
+
+    function normalizeKey(s){
+      return (s || "").trim().toLowerCase();
+    }
+
+    async function loadTodayMessage(){
+      const today = new Date();
+      const todayKey = formatDateKey(today);
+
+      // Se setea, pero aún no se ve (todo está oculto)
+      dateEl.textContent = formatDateHuman(today);
+      metaEl.textContent = "";
+
+      try {
+        // Romper caché agregando timestamp
+        const url = SHEETS_CSV_URL + "&t=" + Date.now();
+        const res = await fetch(url, { cache: "no-store" });
+        if (!res.ok) throw new Error("No se pudo cargar el CSV");
+        const csv = await res.text();
+
+        const table = parseCsv(csv);
+        if (table.length < 2) {
+          quoteEl.textContent = "Tu Sheet está vacío o no está publicado como CSV.";
+          showAll();
+          return;
+        }
+
+        // Headers: Fecha, Mensaje (no importa mayúsculas/minúsculas)
+        const headers = table[0].map(h => normalizeKey(h));
+        const idxFecha = headers.indexOf("fecha");
+        const idxMensaje = headers.indexOf("mensaje");
+
+        if (idxFecha === -1 || idxMensaje === -1) {
+          quoteEl.textContent = "Encabezados inválidos. Usa exactamente: Fecha, Mensaje.";
+          showAll();
+          return;
+        }
+
+        // Buscar fila con Fecha == hoy
+        const body = table.slice(1).map(r => ({
+          fecha: (r[idxFecha] || "").trim(),
+          mensaje: (r[idxMensaje] || "").trim()
+        }));
+
+        const match = body.find(r => r.fecha === todayKey && r.mensaje);
+
+        if (match) {
+          quoteEl.textContent = match.mensaje;
+          metaEl.textContent = `Fecha: ${todayKey}`;
+          showAll();
+          return;
+        }
+
+        // Si no hay frase hoy
+        quoteEl.textContent = "Hoy no hay frase programada.";
+        metaEl.textContent = "Agrega una fila con la fecha de hoy (YYYY-MM-DD).";
+        showAll();
+
+      } catch (err) {
+        console.error(err);
+        quoteEl.textContent = "Error cargando el Sheet. Revisa que esté publicado y accesible.";
+        metaEl.textContent = "";
+        showAll();
+      }
+    }
+
+    loadTodayMessage();
+  </script>
+</body>
+</html>
