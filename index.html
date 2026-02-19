@@ -1,12 +1,25 @@
 <!doctype html>
 <html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Mensaje</title>
+</head>
+
 <body>
   <div id="mensaje"></div>
+
   <script>
-    fetch("https://script.google.com/macros/s/AKfycbxND17ueRy9pMj4vVCyvp8xQYfV1CPaNw0V9Ec6gVSTMuPzzSdznLe_syCPIbw12Dbp/exec", { cache: "no-store" })
+    const WEBAPP_URL = "https://script.google.com/macros/s/AKfycbxND17ueRy9pMj4vVCyvp8xQYfV1CPaNw0V9Ec6gVSTMuPzzSdznLe_syCPIbw12Dbp/exec";
+
+    fetch(WEBAPP_URL + "?t=" + Date.now(), { cache: "no-store" })
       .then(r => r.text())
-      .then(t => document.getElementById("mensaje").textContent = t)
-      .catch(() => document.getElementById("mensaje").textContent = "");
+      .then(t => {
+        document.getElementById("mensaje").textContent = (t || "").trim();
+      })
+      .catch(() => {
+        document.getElementById("mensaje").textContent = "";
+      });
   </script>
 </body>
 </html>
