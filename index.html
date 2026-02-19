@@ -1,104 +1,12 @@
 <!doctype html>
-<html lang="es" class="loading">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Mensaje del día</title>
-
-  <!-- Evitar caché (ayuda en algunos casos) -->
-  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0" />
-  <meta http-equiv="Pragma" content="no-cache" />
-  <meta http-equiv="Expires" content="0" />
-
-  <style>
-    /* Oculta todo hasta tener el texto */
-    html.loading, html.loading body { display: none; }
-  </style>
-</head>
-
+<html lang="es">
 <body>
   <div id="mensaje"></div>
-
   <script>
-    const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSIeSLoGa--GmKVbgTW_c_KfKD-qbA-ySD_RQMPVlwrACZmIWENC1X0foqJJaVHmgwVtsMHkWdnhHAd/pub?output=csv";
-
-    const el = document.getElementById("mensaje");
-
-    function showAll(){ document.documentElement.classList.remove("loading"); }
-
-    function todayKey(){
-      const d = new Date();
-      const yyyy = d.getFullYear();
-      const mm = String(d.getMonth() + 1).padStart(2, "0");
-      const dd = String(d.getDate()).padStart(2, "0");
-      return `${yyyy}-${mm}-${dd}`; // YYYY-MM-DD
-    }
-
-    // CSV robusto (soporta comas y comillas)
-    function parseCsv(csvText){
-      const rows = [];
-      let row = [], field = "", inQuotes = false;
-
-      for (let i = 0; i < csvText.length; i++) {
-        const c = csvText[i];
-        const next = csvText[i + 1];
-
-        if (c === '"') {
-          if (inQuotes && next === '"') { field += '"'; i++; }
-          else { inQuotes = !inQuotes; }
-          continue;
-        }
-
-        if (!inQuotes && c === ",") { row.push(field); field = ""; continue; }
-
-        if (!inQuotes && (c === "\n" || c === "\r")) {
-          if (c === "\r" && next === "\n") i++;
-          row.push(field); field = "";
-          if (row.some(v => v.trim() !== "")) rows.push(row);
-          row = [];
-          continue;
-        }
-
-        field += c;
-      }
-
-      row.push(field);
-      if (row.some(v => v.trim() !== "")) rows.push(row);
-      return rows;
-    }
-
-    (async () => {
-      const key = todayKey();
-
-      try {
-        const url = CSV_URL + "&t=" + Date.now(); // romper caché
-        const res = await fetch(url, { cache: "no-store" });
-        if (!res.ok) throw new Error("fetch failed");
-        const csv = await res.text();
-
-        const table = parseCsv(csv);
-        if (table.length < 2) { el.textContent = ""; showAll(); return; }
-
-        const headers = table[0].map(h => (h || "").trim().toLowerCase());
-        const iFecha = headers.indexOf("fecha");
-        const iMsg   = headers.indexOf("mensaje");
-
-        if (iFecha === -1 || iMsg === -1) { el.textContent = ""; showAll(); return; }
-
-        const rows = table.slice(1).map(r => ({
-          fecha: (r[iFecha] || "").trim(),
-          mensaje: (r[iMsg] || "").trim()
-        }));
-
-        const match = rows.find(r => r.fecha === key && r.mensaje);
-
-        el.textContent = match ? match.mensaje : "";
-        showAll();
-      } catch (e) {
-        el.textContent = "";
-        showAll();
-      }
-    })();
+    fetch("TU_WEBAPP_URL", { cache: "no-store" })
+      .then(r => r.text())
+      .then(t => document.getElementById("mensaje").textContent = t)
+      .catch(() => document.getElementById("mensaje").textContent = "");
   </script>
 </body>
 </html>
